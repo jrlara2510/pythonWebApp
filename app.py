@@ -1,52 +1,53 @@
+#streamlit run app.py
+
 import pandas as pd
-import scipy.stats
+import plotly.express as px
 import streamlit as st
-import time
 
-# estas son variables de estado que se conservan cuando Streamlin vuelve a ejecutar este script
-if 'experiment_no' not in st.session_state:
-    st.session_state['experiment_no'] = 0
+# Lectura y tratamiento de los datos
+car_data = pd.read_csv('vehicles_us.csv') 
+# Transformación de fecha de publicación
+car_data['date_posted'] = pd.to_datetime(car_data['date_posted'])
+car_data['year_posted'] = car_data['date_posted'].dt.year
+car_data['years_old'] = car_data['date_posted'].dt.year - car_data.model_year
 
-if 'df_experiment_results' not in st.session_state:
-    st.session_state['df_experiment_results'] = pd.DataFrame(columns=['no', 'iteraciones', 'media'])
+# Set the title or header for your Streamlit app
+st.title("Distribución de datos de dataset de venta de vehiculos")
 
-st.header('Lanzar una moneda')
+#Descripcion
+st.markdown(""" \n Analisis Exploratorio de datos para el dataset **vehicules_us.csv**, el cual contiene información sobre la venta de un vehículo, y los diversos factores que llegan a fectar en el precio de este. Algunos de ellos son el modelo del vehiculo, el estado, año, millaje recorrido, color, entre otros.  \n""")
 
-chart = st.line_chart([0.5])
+# Create a layout with two columns
+col1, col2, col3 = st.columns(3)
 
-def toss_coin(n):
+# Add check buttons to the columns
+check_box_hist = col1.checkbox("Genera Histograma")
+check_box_disp = col2.checkbox("Genera Grafico de Dispersión")
+check_scatter_matrix = col3.checkbox("Genera grafico de correlaciones.")
 
-    trial_outcomes = scipy.stats.bernoulli.rvs(p=0.5, size=n)
+if check_box_hist: # al hacer clic en el botón
+    # escribir un mensaje
+    st.write('Creación de un histograma para la distribución del millaje de vehiculos.')
+    
+    # crear un histograma
+    fig = px.histogram(car_data, x="odometer")
 
-    mean = None
-    outcome_no = 0
-    outcome_1_count = 0
+    # mostrar un gráfico Plotly interactivo
+    st.plotly_chart(fig, use_container_width=True) 
+    
 
-    for r in trial_outcomes:
-        outcome_no +=1
-        if r == 1:
-            outcome_1_count += 1
-        mean = outcome_1_count / outcome_no
-        chart.add_rows([mean])
-        time.sleep(0.05)
+if check_box_disp: # al hacer clic en el botón   
+    # escribir un mensaje
+    st.write('Creación de un grafico de dispersión de millaje contra precio del vehiculo.')
+    fig = px.scatter(car_data, x="odometer", y="price") # crear un gráfico de dispersión
+    # mostrar un gráfico Plotly interactivo
+    st.plotly_chart(fig, use_container_width=True) 
 
-    return mean
+if check_scatter_matrix: # al hacer clic en el botón
+    # escribir un mensaje
+    st.write('Creación de un grafico de correlacion del precio del vehiculo cotra los años y el millaje.')
+    columns = ['price','years_old','odometer']
 
-number_of_trials = st.slider('¿Número de intentos?', 1, 1000, 10)
-start_button = st.button('Ejecutar')
-
-if start_button:
-    st.write(f'Experimento con {number_of_trials} intentos en curso.')
-    st.session_state['experiment_no'] += 1
-    mean = toss_coin(number_of_trials)
-    st.session_state['df_experiment_results'] = pd.concat([
-        st.session_state['df_experiment_results'],
-        pd.DataFrame(data=[[st.session_state['experiment_no'],
-                            number_of_trials,
-                            mean]],
-                     columns=['no', 'iterations', 'mean'])
-        ],
-        axis=0)
-    st.session_state['df_experiment_results'] = st.session_state['df_experiment_results'].reset_index(drop=True)
-
-st.write(st.session_state['df_experiment_results'])
+    fig = px.scatter_matrix(car_data, dimensions=columns, title='Precio del vehiculo vs año & millaje.')
+    # mostrar un gráfico Plotly interactivo
+    st.plotly_chart(fig, use_container_width=True) 
